@@ -24,10 +24,13 @@ jobs:
         run: flutter --version
 
       - name: Install dependencies
+        working-directory: flutter_module
         run: flutter pub get
 
       - name: Analyze code
+        working-directory: flutter_module
         run: flutter analyze
 
       - name: Run tests
+        working-directory: flutter_module
         run: flutter test
