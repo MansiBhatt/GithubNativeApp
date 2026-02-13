@@ -1,0 +1,30 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    // 🔴 IMPORTANT: allow Flutter to add its repo
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://storage.googleapis.com/download.flutter.io")
+        }
+    }
+}
+
+rootProject.name = "GithubNativeApp"
+include(":app")
+
+// 🔥 FLUTTER MODULE INTEGRATION (REQUIRED)
+setBinding(new Binding([gradle: this]))
+
+evaluate(new File(
+        settingsDir,
+        "flutter_module/.android/include_flutter.groovy"
+))
