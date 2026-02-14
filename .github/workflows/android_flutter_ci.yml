@@ -1,36 +1,105 @@
-name: Flutter CI
+name: CI - Lint → Sonar → Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
-  build:
+
+  # ----------------------------------
+  # 1️⃣ LINT + TEST (Flutter Module)
+  # ----------------------------------
+  lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.0'   # match your Flutter version
+          flutter-version: '3.41.0'
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Install dependencies
+      - name: Flutter pub get
         working-directory: flutter_module
         run: flutter pub get
 
-      - name: Analyze code
+      - name: Flutter analyze
         working-directory: flutter_module
         run: flutter analyze
 
-      - name: Run tests
+      - name: Run Flutter tests
         working-directory: flutter_module
-        run: flutter test
+        run: flutter test --coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: flutter_module/coverage/lcov.info
+
+
+  # ----------------------------------
+  # 2️⃣ SONARCLOUD ANALYSIS
+  # ----------------------------------
+  sonar:
+    needs: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
+  # ----------------------------------
+  # 3️⃣ BUILD (Flutter Module + Android)
+  # ----------------------------------
+  build:
+    needs: sonar
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Setup Java for Android build
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.0'
+          channel: stable
+
+      # Flutter Module build
+      - name: Flutter pub get
+        working-directory: flutter_module
+        run: flutter pub get
+
+      - name: Build Flutter AAR
+        working-directory: flutter_module
+        run: flutter build aar
+
+      # Build Android host app
+      - name: Grant gradlew permission
+        run: chmod +x gradlew
+
+      - name: Build Android Debug APK
+        run: ./gradlew assembleDebug
+
+      # Upload APK
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
