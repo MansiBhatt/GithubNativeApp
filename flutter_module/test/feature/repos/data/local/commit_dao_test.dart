@@ -1,4 +1,6 @@
 import 'package:flutter_module/features/repos/data/local/commit_dao.dart';
+import 'package:flutter_module/features/repos/data/local/commit_table.dart';
+import 'package:flutter_module/features/repos/data/local/repo_db.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -8,7 +10,14 @@ void main() {
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+
+  });
+
+  setUp(() async {
     commitDao = CommitDao();
+
+    final db = await RepoDB.instance.database;
+    await db.delete(CommitTable.table); // 🔥 clear table before each test
   });
 
   test('insertCommits should insert commit messages', () async {
