@@ -10,9 +10,9 @@ on:
 
 jobs:
 
-  # -----------------------------------------
-  # 1️⃣ LINT & TEST (Flutter Module)
-  # -----------------------------------------
+  # ==========================================================
+  # 1️⃣ LINT + TEST (Flutter Module)
+  # ==========================================================
   lint:
     name: Flutter Lint & Test
     runs-on: ubuntu-latest
@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Fixes Sonar blame warning
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -39,9 +41,10 @@ jobs:
         working-directory: flutter_module
         run: flutter test --coverage
 
-  # -----------------------------------------
-  # 2️⃣ SONARCLOUD SCAN (CLI BASED)
-  # -----------------------------------------
+
+  # ==========================================================
+  # 2️⃣ SONARCLOUD ANALYSIS (CLI BASED)
+  # ==========================================================
   sonar:
     name: SonarCloud Analysis
     needs: lint
@@ -50,6 +53,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Java (Required for Sonar)
         uses: actions/setup-java@v4
@@ -83,15 +88,16 @@ jobs:
             -Dsonar.projectKey=MansiBhatt_GithubNativeApp \
             -Dsonar.organization=mansibhatt \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.sources=flutter_module/lib \
             -Dsonar.tests=flutter_module/test \
             -Dsonar.dart.lcov.reportPaths=flutter_module/coverage/lcov.info \
             -Dsonar.qualitygate.wait=true
 
-  # -----------------------------------------
+
+  # ==========================================================
   # 3️⃣ ANDROID BUILD (KOTLIN HOST APP)
-  # -----------------------------------------
+  # ==========================================================
   build:
     name: Android Build
     needs: sonar
@@ -100,6 +106,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -121,5 +129,9 @@ jobs:
         working-directory: flutter_module
         run: flutter build aar
 
-      - name: Build Android APK
+      # 🔥 Fix gradlew permission issue
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build Android Debug APK
         run: ./gradlew assembleDebug
